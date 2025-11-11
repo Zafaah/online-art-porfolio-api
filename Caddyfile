@@ -1,0 +1,7 @@
+localhost {
+	
+	tls internal
+	handle_path /api/* {
+		reverse_proxy ArtPortfolio_API:8000
+	}
+}
