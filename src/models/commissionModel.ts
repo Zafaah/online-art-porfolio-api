@@ -27,7 +27,7 @@ const commissionSchema = new mongoose.Schema<Commission>({
    artistId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Artist',
-      required: true,
+      
    },
    description: {
       type: String,

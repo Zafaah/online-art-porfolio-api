@@ -1,15 +1,7 @@
 import   mongoose  from "mongoose";
 
 
-export interface AuditLog {
-   userId: mongoose.Types.ObjectId;
-   action: string;
-   entityId: mongoose.Types.ObjectId;
-   entityType: 'ArtsWork' | 'Commission' | 'User';
-   timestamp: Date;
-}
-
-const auditLogSchema = new mongoose.Schema<AuditLog>({
+const auditLogSchema = new mongoose.Schema({
    userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
@@ -26,7 +18,7 @@ const auditLogSchema = new mongoose.Schema<AuditLog>({
    },
    entityType: {
       type: String,
-      enum: ['ArtsWork', 'Commission', 'User'],
+      enum: ['ArtsWork', 'Commission', 'User','Artist'],
       required: true,
    },
    timestamp: {
@@ -34,5 +26,7 @@ const auditLogSchema = new mongoose.Schema<AuditLog>({
       required: true,
    }
 })
-export const AuditLogModel = mongoose.model<AuditLog>('AuditLog', auditLogSchema);
+
+
+export const AuditLogModel = mongoose.model('AuditLog', auditLogSchema);
 

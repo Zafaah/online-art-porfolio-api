@@ -4,7 +4,7 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "bun run index.ts",
+    "dev": "bun  run --watch index.ts",
     "build": "bun build index.ts --outdir=dist --target=deno"
   },
   "devDependencies": {
@@ -20,7 +20,9 @@
   "dependencies": {
     "bcrypt": "^6.0.0",
     "bson": "^7.0.0",
+    "bullmq": "^5.12.8",
     "hono": "^4.10.4",
+    "ioredis": "^5.4.1",
     "jose": "^6.1.0",
     "mongodb": "^7.0.0",
     "mongodb-connection-string-url": "^3.0.2",

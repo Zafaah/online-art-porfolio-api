@@ -43,14 +43,11 @@ const artistSchema = new mongoose.Schema<Artist>({
       default: '',
    },
    socialLinks: {
-      LinkedIn: {
-         type: String,
-         default: '',
+      type: {
+         LinkedIn: { type: String, default: '',},
+         Facebook: { type: String, default: '',}
       },
-      Facebook: {
-         type: String,
-         default: '',
-      }
+      default:{}
    }
    }, { timestamps: true });
 
