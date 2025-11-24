@@ -1,6 +1,5 @@
 
-// import './processors/paymentProcessor';
-// import './processors/notificationProcessor';
-// import './processors/shippingProcessor';
+export { commissionQueue, workerOptions } from './queue';
+export { commissionWorker } from './workers/commissionWorker';
 
-// export { paymentQueue, notificationQueue, shippingQueue, isRedisAvailable } from './queue';
+import './workers/commissionWorker';

@@ -5,7 +5,8 @@ import userRoute from "./src/routes/userRoute";
 import artistRoute from "./src/routes/artistRoute";
 import artsworkRouter from "./src/routes/arttsWorkRouter";
 import commissionRoute from "./src/routes/commissionRoute";
-// import orderRoute from "./src/routes/orderRoute";
+import auditRoute from "./src/routes/auditRoute";
+
 import "./src/jobs";
 
 const app = new Hono();
@@ -21,7 +22,8 @@ app.route("/api/users", userRoute);
 app.route('/api/artists', artistRoute);
 app.route('/api/artswork', artsworkRouter);
 app.route('/api/commission',commissionRoute);
-// app.route('/api/orders', orderRoute);
+app.route('/api/audit', auditRoute);
+
 
 serve({
    fetch: app.fetch,

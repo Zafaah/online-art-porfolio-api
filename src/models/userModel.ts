@@ -4,7 +4,7 @@ export interface User{
    userName: string;
    email: string;
    password: string;
-   role: 'admin' | 'artist' | 'client';
+   role: 'artist' | 'client';
    lastToken?: string;
    createdAt: Date;
    updatedAt: Date;

@@ -5,7 +5,7 @@ const auditLogSchema = new mongoose.Schema({
    userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-      required: true,
+      required: false, 
    },
    action: {
       type: String,
@@ -13,17 +13,30 @@ const auditLogSchema = new mongoose.Schema({
    },
    entityId: {
       type: mongoose.Schema.Types.ObjectId,
-      required: true,   
+      required: true,
       refPath: 'entityType'
    },
    entityType: {
       type: String,
-      enum: ['ArtsWork', 'Commission', 'User','Artist'],
+      enum: ['ArtsWork', 'Commission', 'User', 'Artist', 'Job'],
       required: true,
+   },
+   oldValue: {
+      type: mongoose.Schema.Types.Mixed,
+      required: false,
+   },
+   newValue: {
+      type: mongoose.Schema.Types.Mixed,
+      required: false,
+   },
+   metadata: {
+      type: mongoose.Schema.Types.Mixed,
+      required: false,
    },
    timestamp: {
       type: Date,
       required: true,
+      default: Date.now,
    }
 })
 

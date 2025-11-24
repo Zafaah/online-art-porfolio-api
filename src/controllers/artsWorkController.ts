@@ -45,7 +45,7 @@ export const createArtsWork = async (c: Context) => {
          dimensions,
          stock 
       }=body
-      if (!title || !description || !medium || price == null || !status || !artistId || !imag) {
+      if (!title || !description || !medium || price  || !status || !artistId || !imag) {
          return sendError(c, 400, "Title, Description, Medium, Price, Status, ArtistId, and Image are required");
       }
 

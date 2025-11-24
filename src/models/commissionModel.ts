@@ -8,7 +8,7 @@ export interface Commission {
    description:string;
    budget: number;
    due_date: Date;
-   commission_status: 'Pending_Approval' | 'In_Progress' | 'Completed' | 'Cancelled'
+   commission_status: 'Pending_Approval' | 'In_Progress' | 'Completed' | 'Cancelled'| 'Paid';
    createdAt: Date;
    updatedAt: Date;
 }
@@ -43,7 +43,12 @@ const commissionSchema = new mongoose.Schema<Commission>({
    }, 
    commission_status: {
       type: String,
-      enum: ['Pending_Approval', 'In_Progress', 'Completed', 'Cancelled'],
+      enum: ['Pending_Approval',
+         'In_Progress', 
+         'Completed', 
+         'Cancelled', 
+         'Paid',
+      ],
       required: true,
    },
 }, { timestamps: true });

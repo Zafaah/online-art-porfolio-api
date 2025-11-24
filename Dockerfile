@@ -1,6 +1,6 @@
 FROM oven/bun:latest
 
-WORKDIR /user/src/app
+WORKDIR /usr/src/app
 
 COPY package.json bun.lockb* ./
 
