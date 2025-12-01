@@ -5,7 +5,10 @@ import {
   getArtistCommission,
   artistAcceptCommission,
   artistCompleteCommission,
-  paymentSimulation
+  paymentSimulation,
+  cancelCommission,
+  renegotiateCommission,
+  respondToRenegotiation
 } from "../controllers/commissionController";
 
 const commissionRoute = new Hono();
@@ -17,6 +20,9 @@ commissionRoute.get('/artist', getArtistCommission);
 commissionRoute.put('/:commissionId/accept', artistAcceptCommission);
 commissionRoute.put('/:commissionId/complete', artistCompleteCommission);
 commissionRoute.put('/:commissionId/payment', paymentSimulation);
+commissionRoute.put('/:commissionId/cancel', cancelCommission);
+commissionRoute.put('/:commissionId/renegotiate', renegotiateCommission);
+commissionRoute.put('/:commissionId/renegotiate/respond', respondToRenegotiation);
 
 export default commissionRoute;
 

@@ -5,14 +5,14 @@ export interface Artswork{
    description: string;
    medium: string;
    price: number;
-   imag:string
+   image:string
    status: 'For_Sale' | 'Reserved' | 'Sold' | 'Archived';
-   artistId: mongoose.Types.ObjectId;
+   artist: mongoose.Types.ObjectId;
    createdAt: Date;
    updatedAt: Date;
-   type?: 'Physical' | 'Digital';
+   type?: 'Physical' | 'Digital';      
    dimensions?: string;
-   stock?: number;
+   
 }
 
 const artsWorkSchema = new mongoose.Schema<Artswork>({
@@ -35,7 +35,7 @@ const artsWorkSchema = new mongoose.Schema<Artswork>({
       required: true,
       min: 0,
    },
-   imag: {
+   image: {
       type: String,
       required:true
    },
@@ -44,7 +44,7 @@ const artsWorkSchema = new mongoose.Schema<Artswork>({
       enum: ['For_Sale', 'Reserved', 'Sold', 'Archived'],
       required: true,
    },
-   artistId: {
+   artist: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Artist',
       required: true,
@@ -57,11 +57,7 @@ const artsWorkSchema = new mongoose.Schema<Artswork>({
    dimensions: {
       type: String,
    },
-   stock: {
-      type: Number,
-      default: 1,
-      min: 0,
-   },
+  
 }, { timestamps: true });
 
 export const ArtsWorkModel = mongoose.model<Artswork>('ArtsWork', artsWorkSchema);

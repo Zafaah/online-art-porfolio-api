@@ -3,12 +3,10 @@ services:
   backend:
     build: .
     container_name: ArtPortfolio_API
-    command: bun run dev
     restart: always
     ports:
       - "8000:8000"
     environment:
-      - BUN_WATCHER_USE_POLLING=1
       - REDIS_HOST=redis
       - REDIS_PORT=6379
     env_file:
@@ -38,6 +36,8 @@ services:
     restart: always
     ports:
       - "6379:6379"
+    volumes:
+      - redis-data:/data
     networks:
       - art_network
     
@@ -57,6 +57,7 @@ services:
       
 volumes:
   mongo-data:
+  redis-data:
   node_modules:
 
 networks:

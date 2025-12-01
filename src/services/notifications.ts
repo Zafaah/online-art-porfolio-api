@@ -1,6 +1,6 @@
 
-import { UserModel } from "../../models/userModel";
-import { AppError } from "../../utilits/appError";
+import { UserModel } from "../models/userModel";
+import { AppError } from "../utilits/appError";
 
 
 export const sendNotification = {

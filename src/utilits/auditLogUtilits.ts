@@ -2,6 +2,7 @@ import { AuditLogModel } from "../models/auditLogModel";
 import mongoose from "mongoose";
 import type { Context } from "hono";
 import { sendError } from "./apiResponse";
+import { UserModel } from "../models/userModel";
 
 export interface AuditLog {
    userId?: mongoose.Types.ObjectId; 
@@ -18,9 +19,9 @@ export interface CommissionStatusChangeAudit extends AuditLog {
    oldValue: string; 
    newValue: string; 
    metadata?: {
-      changedBy: 'user' | 'system' | 'job';
+      changedBy: mongoose.Types.ObjectId;
       reason?: string;
-   };
+   }
 }
 
 export interface JobProcessingAudit extends AuditLog {
@@ -35,48 +36,70 @@ export interface JobProcessingAudit extends AuditLog {
 }
 
 
+
 export const createAuditLog = async (c: Context, log: AuditLog) => {
    try {
-      return await AuditLogModel.create({
+      return AuditLogModel.create({
          ...log,
+         
          timestamp: new Date(),
-      });
+      })
    } catch (error: any) {
-      return sendError(c, 501, error.message || "AuditLog Error")
+      return sendError(c, 501, error.message || "AuditLog Error");
    }
 };
+export const auditSystemEvent = (
+   c: Context,
+   action: string,   
+   entityId: mongoose.Types.ObjectId,
+   entityType: 'Commission' | 'Job',
+   metadata?: any
+) => {
+   return createAuditLog(c ,{ action, entityId, entityType, metadata });
+};
+
+
+
 
 export const auditCommissionStatusChange = async (
    commissionId: mongoose.Types.ObjectId,
    oldStatus: string,
    newStatus: string,
    userId?: mongoose.Types.ObjectId,
-   changedBy: 'user' | 'system' | 'job' = 'user',
+   changedBy: string = 'userName',
    reason?: string
 ) => {
    try {
-      const auditLog: CommissionStatusChangeAudit = {
+      let changedByName = changedBy;
+      if (userId) {
+         const user = await UserModel.findById(userId).select("userName");
+         if (user) {
+            changedByName = user.userName; 
+         }
+      }
+
+      const auditLog = {
          userId,
-         action: 'STATUS_CHANGE',
+         action: "STATUS_CHANGE",
          entityId: commissionId,
-         entityType: 'Commission',
+         entityType: "Commission" as const,
          oldValue: oldStatus,
          newValue: newStatus,
          metadata: {
-            changedBy,
+            changedBy: changedByName, 
             reason
-         }
+         },
+         timestamp: new Date()
       };
 
       return await AuditLogModel.create(auditLog);
-   } catch (error: any) {
-      console.error('Failed to create commission status change audit log:', error);
-      
+
+   } catch (error) {
+      console.error("Failed to create commission status change audit log:", error);
    }
 };
 
 export const auditJobProcessing = async (
-   jobId: string,
    jobType: string,
    commissionId: string,
    success: boolean,
@@ -86,7 +109,7 @@ export const auditJobProcessing = async (
    try {
       const auditLog: JobProcessingAudit = {
          action: success ? 'JOB_COMPLETED' : 'JOB_FAILED',
-         entityId: new mongoose.Types.ObjectId(jobId),
+         entityId: new mongoose.Types.ObjectId(), 
          entityType: 'Job',
          metadata: {
             jobType,
@@ -103,23 +126,3 @@ export const auditJobProcessing = async (
    }
 };
 
-export const auditSystemEvent = async (
-   action: string,
-   entityId: mongoose.Types.ObjectId,
-   entityType: 'Commission' | 'Job',
-   metadata?: any
-) => {
-   try {
-      const auditLog: AuditLog = {
-         action,
-         entityId,
-         entityType,
-         metadata
-      };
-
-      return await AuditLogModel.create(auditLog);
-   } catch (error: any) {
-      console.error('Failed to create system event audit log:', error);
-      
-   }
-};

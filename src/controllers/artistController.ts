@@ -1,5 +1,6 @@
 import { ArtistModel } from "../models/artistModel";
 import { UserModel } from "../models/userModel";
+import auditRoute from "../routes/auditRoute";
 import { sendError, sendResponse } from "../utilits/apiResponse";
 import { createAuditLog } from "../utilits/auditLogUtilits";
 import type { Context } from "hono";
@@ -26,25 +27,30 @@ export const getArtistById = async (c: Context) => {
    }
 }
 
+
 export const createArtist = async (c: Context) => {
    try {
       const body = await c.req.json();
-      const { userId,fullName, bio, styles, socialLinks,LinkedIn,Facebook, location, contactInfo } = body;
+      const { userId, fullName, bio, socialLinks = {LinkedIn: '', Facebook: ''}, location, contactInfo } = body;
 
-      if (!userId || !fullName || !bio || !styles || !location || !contactInfo) {
-         return sendError(c, 404,"FullName, Bio, Styles, SocialLinks, Location, and ContactInfo are required")
-         
+      if (!userId || !fullName || !bio || !location || !contactInfo) {
+         return sendError(c, 404, "FullName, Bio, Location, and ContactInfo are required")
+
       }
 
       const existingArtist = await ArtistModel.findOne({ userId });
 
       if (existingArtist) {
-         return sendError(c, 400,"Artist already exists")
+         return sendError(c, 400, "Artist already exists")
       }
 
       const user = await UserModel.findById(userId);
       if (user?.role === 'client') {
-         return sendError(c, 404,"Clients are not allowed to create artist profiles")
+         return sendError(c, 404, "Clients are not allowed to create artist profiles")
+      }
+      const existUser = await UserModel.findById(userId);
+      if (!existUser) {
+         return sendError(c, 404, "User not found")
       }
 
 
@@ -52,51 +58,65 @@ export const createArtist = async (c: Context) => {
          userId,
          fullName,
          bio,
-         styles,
          socialLinks,
-         LinkedIn,
-         Facebook,
-         
+         linkedin: socialLinks.LinkedIn,
+         facebook: socialLinks.Facebook,
          location,
          contactInfo
       });
 
       await UserModel.findByIdAndUpdate(userId, { isArtist: true });
 
-   await newArtist.populate('userId');
+      await newArtist.populate('userId');
 
-   await createAuditLog(c,{
-      userId: userId,
-      action: "Created Artist",
-      entityType: "Artist",
-      entityId: newArtist._id
-   })
+      await createAuditLog(c, {
+         userId: userId,
+         action: "Created Artist",
+         entityType: "Artist",
+         entityId: newArtist._id
+      })
 
-   return sendResponse(c, 201, "new Artist created successfully....", newArtist)
+      return sendResponse(c, 201, "new Artist created successfully....", newArtist)
    } catch (error: any) {
       return sendError(c, 505, error.message || 'internal server error')
    }
 };
 
+
+
 export const updateArtist = async (c: Context) => {
    try {
       const { id } = c.req.param();
-      const { fullName, bio, styles, socialLinks, location, contactInfo } = await c.req.json();
+      const body = await c.req.json();
+      const { fullName, bio,  socialLinks, location,contactInfo } = body;
 
-      const artist = await ArtistModel.findByIdAndUpdate(id, { fullName, bio, styles, socialLinks, location, contactInfo }, { new: true });
+      const updateData: any = {};
+      if (fullName !== undefined) updateData.fullName = fullName;
+      if (bio !== undefined) updateData.bio = bio;
+      if (socialLinks !== undefined) updateData.socialLinks = socialLinks;
+      if (location !== undefined) updateData.location = location;
+      if (contactInfo !== undefined) updateData.contactInfo = contactInfo;
+
+      const artist = await ArtistModel.findByIdAndUpdate(
+         id,
+         { $set: updateData },
+         { new: true, runValidators: true }
+      );
 
       if (!artist) {
-         return sendError(c, 404, "Artist not found")
+         return sendError(c, 404, "Artist not found");
       }
       
-      await createAuditLog(c, {
+      
+      await UserModel.findByIdAndUpdate(artist.userId, { isArtist: true });
+      await createAuditLog(c,{
          userId: artist.userId,
          action: "Updated Artist",
          entityType: "Artist",
-         entityId: artist._id
-      });
-      await UserModel.findByIdAndUpdate(artist.userId, { isArtist: true });
-
+         entityId: artist._id,
+         oldValue: artist,
+         newValue: artist
+      })
       return sendResponse(c, 201, "updated successfully...", artist);
    } catch (error: any) {
       return sendError(c, 505, error.message || 'internal server error')
@@ -108,16 +128,16 @@ export const deleteArtist = async (c: Context) => {
       const { id } = c.req.param();
       const artist = await ArtistModel.findByIdAndDelete(id);
       if (!artist) {
-         return sendError(c, 404, "Artist not found")
+         return sendError(c, 404, "artist not found")
       }
-      await createAuditLog(c,{
-         userId: artist.userId,
+      await createAuditLog(c, {
+         userId: artist._id,
          action: "Deleted Artist",
          entityType: "Artist",
          entityId: artist._id
       })
-      return sendResponse(c,201,"Artist deleted successfully" ,artist);
+      return sendResponse(c, 200, "artist deleted successfully.....", artist)
    } catch (error: any) {
       return sendError(c, 505, error.message || 'internal server error')
    }
-};
+}

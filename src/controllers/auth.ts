@@ -6,7 +6,7 @@ export const generalToken = async (user: { userName: string, role: string }) => 
    return await new SignJWT({ userName: user.userName, role: user.role })
       .setProtectedHeader({ alg: "HS256" })
       .setIssuedAt()
-      .setExpirationTime('2h')
+      .setExpirationTime('8h')
       .sign(SECRET_KEY);
 };
 

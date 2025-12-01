@@ -136,6 +136,7 @@ export const updateUser = async (c: Context) => {
       await createAuditLog(c,{
          userId: user._id,
          action: "Updated User",
+         
          entityType: "User",
          entityId: user._id
       })

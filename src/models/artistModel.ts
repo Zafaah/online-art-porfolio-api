@@ -3,7 +3,7 @@ export interface Artist{
    userId:mongoose.Types.ObjectId;
    fullName: string;
    bio: string;
-   styles: string[];
+   
    location?: string;
    contactInfo?: string;
    socialLinks: {
@@ -30,10 +30,7 @@ const artistSchema = new mongoose.Schema<Artist>({
       type: String,
       required: true,
    },
-   styles: {
-      type: [String],
-      required: true,
-   },
+   
    location: {
       type: String,
       default: '',
