@@ -13,7 +13,7 @@ export const sendNotification = {
    ) {
       try {
 
-         // Create notification record
+         
          const notification = new NotificationModel({
             userId: userId,
             title: options?.title,
