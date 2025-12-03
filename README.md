@@ -96,12 +96,6 @@ The repository includes a `.gitlab-ci.yml` that:
 See `.gitlab-ci.yml` for details and adapt runner resource requests/timeouts as needed.
 
 
-## Troubleshooting
-- If jobs do not appear in `jobs` endpoint:
-	- Check `counts` in `/api/jobs` — may show delayed jobs only.
-	- Ensure worker is running and connected to the same Redis instance (check `REDIS_HOST`).
-	- Add logging near `queue.add(...)` to validate enqueues.
-
 
 To install dependencies:
 
