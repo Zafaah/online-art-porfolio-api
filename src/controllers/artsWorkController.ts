@@ -114,12 +114,14 @@ export const updateArtsWork = async (c: Context) => {
          return sendError(c, 404, "Arts Work not found");
       }
       
-      await createAuditLog(c, {
-         userId: artist._id,
-         action: "Updated Arts Work",
-         entityType: "ArtsWork",
-         entityId: artsWork._id
-      })
+      if (artsWork.artist && (artsWork as any).artist._id) {
+         await createAuditLog(c, {
+            userId: (artsWork as any).artist._id,
+            action: "Updated Arts Work",
+            entityType: "ArtsWork",
+            entityId: artsWork._id
+         });
+      }
       return sendResponse(c, 201, "Arts Work updated successfully", artsWork);
    } catch (error: any) {
       return sendError(c, 500, error.message || 'internal server error');
@@ -128,20 +130,22 @@ export const updateArtsWork = async (c: Context) => {
 
 export const deleteArtsWork = async (c: Context) => {
    try {
-      const { id } = c.req.param();
-      const { artist } = await c.req.json();
+      const { id } = c.req.param()
      
-      const artsWork = await ArtsWorkModel.findByIdAndUpdate(id, { artist }, { new: true }).populate('artist');
+      
+      const artsWork = await ArtsWorkModel.findByIdAndDelete(id).populate('artist');
       if (!artsWork) {
          return sendError(c, 404, "Arts Work not found");
       }
 
-      await createAuditLog(c, {
-         userId: artist._id,
-         action: "Deleted Arts Work",
-         entityType: "ArtsWork",
-         entityId: artsWork._id
-      })
+      if (artsWork.artist && (artsWork as any).artist._id) {
+         await createAuditLog(c, {
+            userId: artsWork._id,
+            action: "Deleted Arts Work",
+            entityType: "ArtsWork",
+            entityId: artsWork._id
+         });
+      }
       return sendResponse(c, 201, "Arts Work deleted successfully", artsWork);
    }
    catch (error: any) {
@@ -158,6 +162,27 @@ export const getPhysicalArtworks = async (c: Context) => {
 
       return sendResponse(c, 200, "Physical artworks fetched successfully", artsWorks);
 
+   } catch (error: any) {
+      return sendError(c, 500, error.message || 'internal server error');
+   }
+}
+
+export const buyPhysicalArtwork = async (c: Context) => {
+   try {
+      const { id } = c.req.param();
+      const artsWork = await ArtsWorkModel.findById(id).populate('artist');
+      if (!artsWork) {
+         return sendError(c, 404, "Arts Work not found");
+      }  
+      if (artsWork.type !== 'Physical') {
+         return sendError(c, 400, "This artwork is not available for purchase as it is not a physical artwork");
+      }
+      if (artsWork.status !== 'For_Sale') {
+         return sendError(c, 400, "This artwork is not available for purchase");
+      }
+      artsWork.status = 'Sold';
+      await artsWork.save();
+      return sendResponse(c, 200, "Physical artwork purchased successfully", artsWork);
    } catch (error: any) {
       return sendError(c, 500, error.message || 'internal server error');
    }

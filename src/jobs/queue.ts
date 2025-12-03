@@ -2,16 +2,16 @@ import { Queue } from "bullmq";
 import { connectToRedis } from "../config/redisdb";
 
 
-export const commissionQueue = async () => {
-   const redis = await connectToRedis();
-   return new Queue('commission', {
-      connection: redis,
-   });
-}
+
+export const commissionQueue = new Queue('commission', {
+   connection:connectToRedis
+})
+
+
 
 export const workerOptions = {
-   connection: await connectToRedis(), 
+   connection: connectToRedis,
    concurrency: 5,
-   removeOnComplete: { count: 50 },
-   removeOnFail: { count: 100 },
+   removeOnComplete: {count:0},
+   removeOnFail: {count:0}
 }

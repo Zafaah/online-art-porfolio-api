@@ -1,22 +1,34 @@
 
 import { UserModel } from "../models/userModel";
+import { NotificationModel } from "../models/notification";
 import { AppError } from "../utilits/appError";
 
-
 export const sendNotification = {
-   async send(userId: string, message: string, roleType: string) {
-      try {
-         
-         const user = await UserModel.findById(userId);
-         if (!user) {
-             throw new AppError('User not found', 404);
-         }
 
-         console.log(`[${roleType}] ${userId}: ${message}`);
-         await new Promise(res => setTimeout(res, 1000));
-      } catch (error) {
-         
+   async send(
+      userId: string,
+      message: string,
+      roleType: string,
+      options?: { title?: string; type?: string; meta?: Record<string, any> }
+   ) {
+      try {
+
+         // Create notification record
+         const notification = new NotificationModel({
+            userId: userId,
+            title: options?.title,
+            message,
+            type: options?.type,
+            meta: options?.meta,
+         });
+         await notification.save();
+
+         console.log(`[${roleType}] Notification queued for ${userId}: ${message}`);
+
+         return notification;
+      } catch (error: any) {
+         console.error('sendNotification error:', error?.message ?? error);
+         throw error;
       }
-  
-   }
-}
+   },
+};

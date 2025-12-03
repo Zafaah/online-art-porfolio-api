@@ -5,6 +5,7 @@ export interface Commission {
    artsWorkId: mongoose.Types.ObjectId | null;
    clientId: mongoose.Types.ObjectId;
    artistId: mongoose.Types.ObjectId;
+   artUser: mongoose.Types.ObjectId;
    description:string;
    budget: number;
    due_date: Date;

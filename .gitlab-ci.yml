@@ -1,0 +1,54 @@
+image: oven/bun:latest
+
+stages:
+  - lint
+  - test
+  - build
+
+variables:
+  MONGODB_URI: "mongodb://mongo:27017/online_art_portfolio_ci"
+  REDIS_HOST: "redis"
+  REDIS_PORT: "6379"
+  BUN_INSTALL_OPTIONS: "--no-lockfile"
+
+services:
+  - name: mongo:7
+    alias: mongo
+  - name: redis:7
+    alias: redis
+
+before_script:
+  - bun -v
+  - bun install
+
+lint:
+  stage: lint
+  script:
+    - echo "No linter configured. Skipping lint stage."
+  rules:
+    - when: always
+
+test:
+  stage: test
+  script:
+    - echo "Waiting for dependent services..."
+    - |
+      for i in 1 2 3 4 5 6 7 8 9 10; do
+        nc -z $REDIS_HOST $REDIS_PORT && nc -z mongo 27017 && break || sleep 1;
+      done
+    - bun test
+  artifacts:
+    when: always
+    reports:
+      junit: junit-results.xml
+  allow_failure: false
+
+build:
+  stage: build
+  script:
+    - bun build index.ts --outdir=dist --target=deno
+  artifacts:
+    paths:
+      - dist/
+  rules:
+    - if: $CI_COMMIT_BRANCH

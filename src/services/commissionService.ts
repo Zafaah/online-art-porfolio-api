@@ -3,36 +3,12 @@ import type { Commission } from "../models/commissionModel";
 import { AppError } from "../utilits/appError";
 import { commissionQueue } from "../jobs/queue";
 import { auditCommissionStatusChange } from "../utilits/auditLogUtilits";
+
+
+const queue = commissionQueue
+ 
+
 export const commissionService = {
-
-   async submitCommissionRequest(commissionId: string) {
-      const commission = await CommissionModel.findById(commissionId);
-      if (!commission) {
-         throw new AppError('Commission not found', 404);
-      }
-      const queue = await commissionQueue();
-
-      try {
-         await queue.add('commission-request-submitted', {
-            type: 'commission_request',
-            commissionId: commission._id,
-            userId: commission.artistId,
-            message: `New commission request received: "${commission.description}" with budget $${commission.budget}`,
-            recipientType: 'artist',
-            commissionData: {
-               description: commission.description,
-               budget: commission.budget,
-               dueDate: commission.due_date
-            }
-         });
-
-         return { success: true, message: 'Commission request notification queued successfully' };
-      } catch (error: any) {
-         console.error('Error queuing commission request notification:', error);
-         throw new AppError('Failed to queue commission request notification', 500);
-      }
-   },
-
    async getCommissionById(commissionId: string) {
       const commission = await CommissionModel.findById(commissionId);
       if (!commission) {
@@ -40,6 +16,32 @@ export const commissionService = {
       }
       return commission;
    },
+   
+   async submitCommissionRequest(commissionId: string) {
+      try {
+         const commission = await CommissionModel.findById(commissionId);
+         if (!commission) throw new AppError("Commission not found", 404);
+
+         await commissionQueue.add("commission_request", {
+            type: "commission_request",
+            commissionId: commission._id.toString(),
+            userId: commission.clientId.toString(),
+            message: `New commission request received: "${commission.description}" with budget $${commission.budget}`,
+            commissionData: {
+               description: commission.description,
+               budget: commission.budget,
+               dueDate: commission.due_date,
+            },
+         });
+
+         return { success: true, message: "Commission request notification queued successfully" };
+      } catch (error: any) {
+         console.error("Error queuing commission request notification:", error);
+         throw new AppError("Failed to queue commission request notification", 500);
+      }
+   },
+
+  
 
    async updateStatus(commissionId: string, status: string) {
       try {
@@ -74,7 +76,7 @@ export const commissionService = {
          throw new AppError('Commission not found', 404);
       }
       try {
-         const queue = await commissionQueue();
+       
          await queue.add('commission-completed', {
             type: 'commission_complete',
             commissionId: commission._id.toString(),
@@ -93,41 +95,61 @@ export const commissionService = {
 
    return commission;
 },
-   async addFollowUpJob(commission: Commission & { _id: string }) {
-      const queue = await commissionQueue();
-      return queue.add('follow-up', {
-         type: 'commission_follow_up',
-         commissionId: commission._id.toString(),
-         userId: commission.artistId.toString(),
-         message: `reminder to complete the commission "${commission.description}"`,
-         roleType: 'artist',
-      },
-      {
-         delay: 1000 * 60 * 60 * 24,
-      }
-      );
-   },
-
-
-   async addPaymentJob(commission: Commission & { _id: string }) {
-
-      const queue = await commissionQueue();
-      return queue.add('payment', {
-         type: 'commission_payment',
-         commissionId: commission._id.toString(),
-         userId: commission.clientId.toString(),
-         message: `payment for the commission "${commission.description}" is ready to be paid`,
-         roleType: 'client',
-      },
-      {
-         delay: 1000 * 60 * 60 * 24,
-      }
-      );
-   },
-
-   async paymentNotification(commission: Commission & { _id: string }) { 
+   async addFollowUpJob(commissionId:string) {
       try {
-         const queue = await commissionQueue();
+         const commission = await CommissionModel.findById(commissionId);
+         if (!commission) {
+            throw new AppError('Commission not found', 404);
+         };
+         return queue.add('follow-up', {
+            type: 'commission_follow_up',
+            commissionId: commission._id.toString(),
+            userId: commission.artistId.toString(),
+            message: `reminder to complete the commission "${commission.description}"`,
+            roleType: 'artist',
+         },
+            {
+               delay: 1000 * 60 * 60 * 24,
+            }
+         )
+      }  catch(error: any) {
+         console.error('Error queuing commission renegotiation reminder job:', error);
+         throw new AppError('Failed to queue commission renegotiation reminder notification', 500);
+      }
+   },
+
+
+   async addPaymentJob(commissionId: string) {
+      try {
+         const commission = await CommissionModel.findById(commissionId);
+         if (!commission) {
+            throw new AppError('Commission not found', 404);
+         };
+      
+         return queue.add('payment', {
+            type: 'commission_payment',
+            commissionId: commission._id.toString(),
+            userId: commission.clientId.toString(),
+            message: `payment for the commission "${commission.description}" is ready to be paid`,
+            roleType: 'client',
+         },
+            {
+               delay: 1000 * 60 * 60 * 24,
+            }
+         )
+      } catch(error: any) {
+         console.error('Error queuing commission payment reminder job:', error);
+      throw new AppError('Failed to queue commission commission_payment  notification', 500);
+      };
+   },
+
+   async paymentNotification(commissionId: string) { 
+      try {
+         const commission = await CommissionModel.findById(commissionId);
+         if (!commission) {
+            throw new AppError('Commission not found', 404);
+         };
+         
          await queue.add('commission-payment-confirmed', {
             type: 'payment_confirm',
             commissionId: commission._id.toString(),
@@ -152,8 +174,7 @@ export const commissionService = {
       if (!commission) {
          throw new AppError('Commission not found', 404);
       }
-      const queue = await commissionQueue();
-
+    
       try {
          await queue.add('commission-accepted', {
             type: 'commission_accept',
@@ -180,9 +201,22 @@ export const commissionService = {
          throw new AppError('Commission not found', 404);
       }
    
-      const queue = await commissionQueue();
+      
       try{
-      await queue.add('commission-cancel', {
+         const oldStatus = commission.commission_status;
+         commission.commission_status = 'Cancelled' as any;
+         await commission.save();
+
+         await auditCommissionStatusChange(
+            commission._id,
+            oldStatus,
+            'Cancelled',
+            commission.artistId || commission.clientId,
+            roleType,
+            'Commission cancelled'
+         );
+
+         await queue.add('commission-cancel', {
          type: 'commission_cancel',
          commissionId: commission._id.toString(),
          roleType: roleType,
@@ -203,14 +237,29 @@ export const commissionService = {
       return commission;
    },
 
-   async renegotiateCommission(commission: Commission & { _id: string, roleType: 'client' | 'artist' }) {
-      const queue = await commissionQueue();
-
+   async renegotiateCommission(commissionId:string, roleType: 'client' | 'artist' ) {
       try {
+         const commission = await CommissionModel.findById(commissionId);
+         if (!commission) {
+            throw new AppError('Commission not found', 404);
+         };
+         const oldStatus = commission.commission_status;
+         commission.commission_status = 'Pending_Approval' as any;
+         await commission.save();
+
+         await auditCommissionStatusChange(
+            commission._id,
+            oldStatus,
+            'Pending_Approval',
+            commission.artistId || commission.clientId,
+            roleType,
+            'Renegotiation started'
+         );
+
          await queue.add('renegotiation-started', {
             type: 'renegotiation_started',
             commissionId: commission._id.toString(),
-            roleType: commission.roleType,
+            roleType: roleType,
             message: `Renegotiation initiated for commission "${commission.description}"`,
             commissionData: {
                description: commission.description,
@@ -218,16 +267,12 @@ export const commissionService = {
                dueDate: commission.due_date
             }
          });
-      } catch (error: any) {
-         console.error('Error queuing commission renegotiation job:', error);
-         throw new AppError('Failed to queue commission renegotiation notification', 500);
-      }
-    
-      try {
+      
+   
          await queue.add('renegotiation-reminder-1', {
             type: 'renegotiation_reminder',
             commissionId: commission._id.toString(),
-            roleType: commission.roleType,
+            roleType:roleType,
             reminderLevel: 1,
             message: `REMINDER: Please respond to the renegotiation request for commission "${commission.description}". You have 12 hours remaining.`,
             commissionData: {
@@ -238,17 +283,12 @@ export const commissionService = {
          }, {
             delay: 1000 * 60 * 60 * 12
          });
-      } catch (error: any) {
-         console.error('Error queuing commission renegotiation reminder job:', error);
-         throw new AppError('Failed to queue commission renegotiation reminder notification', 500);
-      }
-      
-      try {
-      
+     
+
          await queue.add('renegotiation-deadline', {
             type: 'renegotiation_deadline',
             commissionId: commission._id.toString(),
-            roleType: commission.roleType,
+            roleType: roleType,
             message: `Renegotiation deadline reached for commission "${commission.description}". Proceeding with current terms.`,
             commissionData: {
                description: commission.description,
@@ -258,63 +298,81 @@ export const commissionService = {
          }, {
             delay: 1000 * 60 * 60 * 24,
          });
+         return commission;
       } catch (error: any) {
          console.error('Error queuing commission renegotiation deadline job:', error);
          throw new AppError('Failed to queue commission renegotiation deadline notification', 500);
       }
    
-      return commission;
+      
    },
 
    async resolveRenegotiation(commission: Commission & { _id: string, accepted: boolean, newBudget?: number, newDueDate?: Date }) {
-      const queue = await commissionQueue();
-  try{
-      if (commission.accepted) {
-        
-         const updateData: any = {};
-         if (commission.newBudget) updateData.budget = commission.newBudget;
-         if (commission.newDueDate) updateData.due_date = commission.newDueDate;
+      try {
+         const commissionDoc = await CommissionModel.findById(commission._id);
+         if (!commissionDoc) throw new AppError('Commission not found', 404);
 
-         if (Object.keys(updateData).length > 0) {
-            await CommissionModel.findByIdAndUpdate(commission._id, updateData);
+         const oldStatus = commissionDoc.commission_status;
+
+         if (commission.accepted) {
+            const updateData: any = {};
+            if (commission.newBudget) updateData.budget = commission.newBudget;
+            if (commission.newDueDate) updateData.due_date = commission.newDueDate;
+
+            if (Object.keys(updateData).length > 0) {
+               await CommissionModel.findByIdAndUpdate(commission._id, updateData);
+            }
+
+            commissionDoc.commission_status = 'In_Progress' as any;
+            await commissionDoc.save();
+
+            await auditCommissionStatusChange(
+               commissionDoc._id,
+               oldStatus,
+               'In_Progress',
+               commissionDoc.artistId || commissionDoc.clientId,
+               'system',
+               'Renegotiation accepted'
+            );
+
+            await queue.add('renegotiation-resolved', {
+               type: 'renegotiation_resolved',
+               commissionId: commission._id.toString(),
+               accepted: commission.accepted,
+               message: `Renegotiation accepted! Commission "${commissionDoc.description}" updated with new terms.`,
+               commissionData: {
+                  description: commissionDoc.description,
+                  newBudget: commission.newBudget,
+                  newDueDate: commission.newDueDate
+               }
+            });
+         } else {
+            
+            commissionDoc.commission_status = oldStatus;
+            await commissionDoc.save();
+
+            await queue.add('renegotiation-resolved', {
+               type: 'renegotiation_resolved',
+               commissionId: commission._id.toString(),
+               accepted: false,
+               message: `Renegotiation rejected. Commission "${commissionDoc.description}" will proceed with original terms.`,
+               commissionData: {
+                  description: commissionDoc.description,
+                  budget: commissionDoc.budget,
+                  dueDate: commissionDoc.due_date
+               }
+            });
          }
 
-        
-         await queue.add('renegotiation-resolved', {
-            type: 'renegotiation_resolved',
-            commissionId: commission._id.toString(),
-            accepted: commission.accepted,
-            message: `Renegotiation accepted! Commission "${commission.description}" updated with new terms.`,
-            commissionData: {
-               description: commission.description,
-               newBudget: commission.newBudget,
-               newDueDate: commission.newDueDate
-            }
-         });
-      } else {
-        
-
-         await queue.add('renegotiation-resolved', {
-            type: 'renegotiation_resolved',
-            commissionId: commission._id.toString(),
-            accepted: false,
-            message: `Renegotiation rejected. Commission "${commission.description}" will proceed with original terms.`,
-            commissionData: {
-               description: commission.description,
-               budget: commission.budget,
-               dueDate: commission.due_date
-            }
-         });
+         return commissionDoc;
+      } catch (error: any) {
+         console.error('Error processing renegotiation resolution:', error);
+         throw new AppError('Failed to process renegotiation resolution', 500);
       }
-   } catch (error: any) {
-      console.error('Error queuing commission renegotiation resolved job:', error);
-      throw new AppError('Failed to queue commission renegotiation resolved notification', 500);
-   }
-      return commission;
    },
 
    async addRenegotiateJob(commission: Commission & { _id: string, roleType: 'client' | 'artist' }) {
-      const queue = await commissionQueue();
+      
       await queue.add('commission-renegotiate', {
          type: 'commission_renegotiate',
          commissionId: commission._id.toString(),

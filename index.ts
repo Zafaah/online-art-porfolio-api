@@ -9,6 +9,8 @@ import auditRoute from "./src/routes/auditRoute";
 
 import "./src/jobs";
 
+import notificationsRoute from "./src/routes/notificationRoute";
+
 const app = new Hono();
  
 
@@ -23,6 +25,8 @@ app.route('/api/artists', artistRoute);
 app.route('/api/artswork', artsworkRouter);
 app.route('/api/commission',commissionRoute);
 app.route('/api/audit', auditRoute);
+
+app.route('/api/notifications', notificationsRoute);
 
 
 serve({

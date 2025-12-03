@@ -5,7 +5,8 @@
   "private": true,
   "scripts": {
     "dev": "bun  run --watch index.ts",
-    "build": "bun build index.ts --outdir=dist --target=deno"
+    "build": "bun build index.ts --outdir=dist --target=deno",
+    "test": "bun test"
   },
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",
@@ -20,7 +21,7 @@
   "dependencies": {
     "bcrypt": "^6.0.0",
     "bson": "^7.0.0",
-    "bullmq": "^5.12.8",
+    "bullmq": "^5.65.1",
     "hono": "^4.10.4",
     "ioredis": "^5.4.1",
     "jose": "^6.1.0",

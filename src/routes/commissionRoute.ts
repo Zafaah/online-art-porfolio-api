@@ -8,10 +8,13 @@ import {
   paymentSimulation,
   cancelCommission,
   renegotiateCommission,
-  respondToRenegotiation
+  respondToRenegotiation,
+  getAllCommission
 } from "../controllers/commissionController";
 
 const commissionRoute = new Hono();
+
+commissionRoute.get('/',getAllCommission) 
 
 commissionRoute.use('*', authMiddleware);
 
