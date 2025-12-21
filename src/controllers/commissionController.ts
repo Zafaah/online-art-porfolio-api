@@ -18,107 +18,6 @@ export const getAllCommission = async (c: Context) => {
    return sendResponse(c,200, "fetch all commission successfully...",commissions)
 } 
 
-// export const submitCommissionRequest = async (c: Context) => { 
-//    try {
-//       const user = c.get("user");
-//       if (!user) {
-//          return sendError(c, 401, 'Unauthorized');
-//       }
-
-//       const body = await c.req.json();
-//       const {
-//          artsWorkId,
-//          budget,
-//          due_date,
-//          description,
-//       } = body;
-      
-
-//       if (!artsWorkId || !description || !budget || !due_date) {
-//          return sendError(c, 400, 'All fields are required');
-//       };
-    
-    
-
-//       const clientUser = await UserModel.findOne({ userName: user.userName });
-//       if (!clientUser) {
-//          return sendError(c, 404, 'User not found');
-//       };
-
-//       if(clientUser.role !== 'client') {
-//          return sendError(c, 403, 'Only clients can submit commission requests');
-//       };
-
-//       const art = await ArtsWorkModel.findById(artsWorkId);
-//       if (!art) {
-//          return sendError(c, 404, 'Artwork not found');
-//       };
-   
-
-//       if (!art.artist) {
-//          return sendError(c, 400, 'Artwork does not have an associated artist');
-//       };
-//       if (budget <= 0) {
-//          return sendError(c, 400, 'Budget must be greater than 0');
-//       }
-
-      
-//       if (budget >= art.price) {
-//          return sendError(c, 400, 'Budget must be less than the artwork price');
-//       }
-
-//       if (due_date < new Date()) {
-//          return sendError(c, 400, 'Due date must be in the future');
-//       };
-
-//       const existdata=await CommissionModel.findOne({artsWorkId,clientId: clientUser._id});
-//       if(existdata) {
-//          return sendError(c, 400, 'Commission request already exists for this artwork');
-//       };
-
-//       const newCommission = await CommissionModel.create({
-//          artsWorkId, 
-//          clientId: clientUser._id,
-//          artistId: art.artist._id,
-//          description,
-//          budget,
-//          due_date,
-//          commission_status: 'Pending_Approval'
-//       });
-//       await newCommission.populate('clientId');
-//       await newCommission.populate('artsWorkId');
-//       await newCommission.populate('artistId');
-    
-//      const  checkPhysicalArtwork = await ArtsWorkModel.findById(artsWorkId);
-//       if (checkPhysicalArtwork?.type === 'Physical') {
-//         return sendError(c, 400, 'Physical artworks are not allowed for commission requests');
-//      }   
-      
-//       const updatedCommission = await commissionService.updateStatus(newCommission._id.toString(), 'Pending_Approval');
-
-//       await createAuditLog(c,{
-//          userId: clientUser._id,
-//          action: "Submitted Commission Request",
-//          entityType: "Commission",
-//          entityId: newCommission._id,
-//          metadata: {
-//             artsWorkId: artsWorkId,
-//             clientId: clientUser._id.toString(),
-//             artistId: art.artist._id.toString(),
-//             budget: budget,
-//             dueDate: due_date,
-//             description: description
-//          }
-//       })
-
-//       await commissionService.submitCommissionRequest(updatedCommission._id.toString());
-
-//       return sendResponse(c, 201, "Commission request submitted successfully", updatedCommission);
-      
-//    } catch (error: any) {
-//       return sendError(c, 500, error.message || 'internal server error');
-//    }
-// }
 
 export const submitCommissionRequest = async (c: Context) => {
    try {
@@ -168,9 +67,9 @@ export const submitCommissionRequest = async (c: Context) => {
       }
 
 
-      if (budget >= art.price) {
-         return sendError(c, 400, 'Budget must be less than the artwork price');
-      }
+      // if (budget >= art.price) {
+      //    return sendError(c, 400, 'Budget must be less than the artwork price');
+      // }
 
       if (due_date < new Date()) {
          return sendError(c, 400, 'Due date must be in the future');
@@ -284,6 +183,19 @@ export const artistAcceptCommission = async (c: Context) => {
       if (!commission) {
          return sendError(c, 404, 'Commission not found');
       }
+      
+      if (commission.artistId.toString() !== artist._id.toString()) {
+         return sendError(c, 403, 'You are not authorized to accept this commission');
+      }
+      if (commission.commission_status === 'In_Progress') {
+         return sendError(c, 400, 'Commission is already in progress');
+      }
+      
+     if(commission.commission_status !== 'Pending_Approval') {
+         return sendError(c, 400, 'Only commissions that are Pending Approval can be accepted');
+      }
+     
+
       await createAuditLog(c, {
          userId: artistUser._id,
          action: "Accepted Commission",
@@ -313,30 +225,38 @@ export const artistAcceptCommission = async (c: Context) => {
 
 export const artistCompleteCommission = async (c: Context) => {
    try {
-   const user = c.get("user");
-   if (!user) {
-      return sendError(c, 401, 'Unauthorized');
-   }
-   const artistUser = await UserModel.findOne({ userName: user.userName });
-   if (!artistUser) {
-      return sendError(c, 404, 'User not found');
-   }
-   const artist = await ArtistModel.findOne({ userId: artistUser._id });
-   if (!artist) {
-      return sendError(c, 404, 'Artist profile not found');
-   };
-   if (artistUser.role !== 'artist') {
-      return sendError(c, 403, 'Only artists can complete commissions');
-   }
-   const { commissionId } = c.req.param();
-   const commission = await CommissionModel.findById(commissionId);
-   if (!commission) {
-      return sendError(c, 404, 'Commission not found');
-   }
-      
-   if (commission.commission_status !== 'In_Progress') {
-      return sendError(c, 400, 'Only commissions that are In Progress can be completed');
-   }
+      const user = c.get("user");
+      if (!user) {
+         return sendError(c, 401, 'Unauthorized');
+      }
+      const artistUser = await UserModel.findOne({ userName: user.userName });
+      if (!artistUser) {
+         return sendError(c, 404, 'User not found');
+      }
+      const artist = await ArtistModel.findOne({ userId: artistUser._id });
+      if (!artist) {
+         return sendError(c, 404, 'Artist profile not found');
+      };
+      if (artistUser.role !== 'artist') {
+         return sendError(c, 403, 'Only artists can complete commissions');
+      }
+      const { commissionId } = c.req.param();
+      const commission = await CommissionModel.findById(commissionId);
+      if (!commission) {
+         return sendError(c, 404, 'Commission not found');
+      }
+      if (commission.artistId.toString() !== artist._id.toString()) {
+         return sendError(c, 403, 'You are not authorized to complete this commission');
+      }
+      if (commission.commission_status === 'Completed') {
+         return sendError(c, 400, 'Commission is already completed');
+      }
+      if (commission.commission_status !== 'In_Progress') {
+         return sendError(c, 400, 'Only commissions that are In Progress can be completed');
+      };
+     
+   
+
    await createAuditLog(c, {
       userId: artistUser._id,
       action: "Completed Commission",
@@ -375,13 +295,21 @@ export const paymentSimulation = async (c: Context) => {
       if (!clientUser) return sendError(c, 404, 'client User not found');
       if (clientUser.role !== 'client') return sendError(c, 403, 'Only clients can process payments');
 
- 
+      
       const { commissionId } = c.req.param();
       const commission = await CommissionModel.findById(commissionId);
       if (!commission) {
          return sendError(c, 404, 'Commission not found');
       }
-
+      if (commission.clientId.toString() !== clientUser._id.toString()) {
+         return sendError(c, 403, 'You are not authorized to pay for this commission');
+      }
+      if (commission.commission_status === 'Paid') {
+         return sendError(c, 400, 'Commission is already paid');
+      }
+      if (commission.commission_status !== 'Completed') {
+         return sendError(c, 400, 'Only completed commissions can be paid for');
+      }
 
       const updatedCommission = await commissionService.updateStatus(commission._id.toString(), 'Paid');
       await commissionService.paymentNotification(updatedCommission._id.toString());
@@ -410,8 +338,7 @@ export const cancelCommission = async (c: Context) => {
          .populate('clientId artistId');
       if (!commission) return sendError(c, 404, 'Commission not found');
 
-      const isClient = commission.clientId.toString() === authenticatedUser._id.toString();
-
+      
       
       let artistUserIdStr: string | null = null;
       if (commission.artistId) {
@@ -423,12 +350,16 @@ export const cancelCommission = async (c: Context) => {
             artistUserIdStr = artistDoc?.userId?.toString() ?? null;
          }
       }
-
+      const isClient = commission.clientId._id.toString() === authenticatedUser._id.toString();
+      console.log('isClient:', isClient);
       const isArtist = artistUserIdStr === authenticatedUser._id.toString();
 
+      
       if (!isClient && !isArtist) {
          return sendError(c, 403, 'You can only cancel your own commissions');
       }
+
+    
 
 
       if (commission.commission_status === 'Completed' ||
@@ -483,9 +414,8 @@ export const renegotiateCommission = async (c: Context) => {
       return sendError(c, 403, 'You can only renegotiate your own commissions');
    }
    
-   if (commission.commission_status === 'Completed' ||
-      commission.commission_status === 'Paid') {
-      return sendError(c, 400, 'Cannot renegotiate a completed or paid commission');
+   if (commission.commission_status === 'Paid') {
+      return sendError(c, 400, 'Cannot renegotiate a  paid commission');
    }
    const roleType = isClient ? 'client' : isArtist ? 'artist' : null;
 
