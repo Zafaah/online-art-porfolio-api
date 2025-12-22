@@ -284,7 +284,7 @@ export const artistCompleteCommission = async (c: Context) => {
 };
 
 
-export const paymentSimulation = async (c: Context) => {
+export const payment = async (c: Context) => {
    try {
       const user = c.get("user");
       if (!user) {
